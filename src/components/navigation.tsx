@@ -5,6 +5,8 @@ import {usePathname} from 'next/navigation'
 import {cn} from '@/lib/utils'
 import {ModeToggle} from '@/components/mode-toggle'
 import {Home, FileText, User} from 'lucide-react'
+import {authorName} from "@/lib/consts";
+import {UkrainianFlag} from "@/components/icons";
 
 export function Navigation() {
   const pathname = usePathname()
@@ -15,9 +17,15 @@ export function Navigation() {
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <Home className="h-6 w-6" />
-            <span className="font-bold">Home</span>
+            <span className="font-bold bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">{authorName}</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
+            <Link href="https://x.com/hashtag/StandWithUkraine" className="font-bold italic" target="_blank" rel="nofollow">
+              <div className="flex items-center space-x-2">
+                <UkrainianFlag/>
+                <span>#StandWithUkraine</span>
+              </div>
+            </Link>
             <Link
               href="/blog"
               className={cn(
