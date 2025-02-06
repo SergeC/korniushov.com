@@ -1,9 +1,9 @@
 export function AuthorBio() {
   return (<>
-    <div className="flex max-w-full flex-col items-center justify-center">
+    <div className="flex max-w-full flex-col items-center justify-center text-justify">
       <div className="prose max-w-full pb-8 pt-10 dark:prose-invert xl:text-xl">
         <p>
-          Howdy! I&#39;m Serhii, a Lead Software Engineer and open-source enthusiast from Dnipro, Ukraine, where I was born
+          Howdy! I&#39;m <b>Serhii</b>, a <i>Lead Software Engineer</i> and open-source enthusiast from Dnipro, Ukraine, where I was born
           and raised.
         </p>
 

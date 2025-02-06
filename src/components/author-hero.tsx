@@ -1,5 +1,5 @@
 import {Button} from "@/components/ui/button";
-import {Linkedin} from "lucide-react";
+import {Linkedin, MapPin} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -28,12 +28,12 @@ export function AuthorHero() {
           </div>
       )}
       <div className="text-center md:text-left">
-        <h3 className="pb-2 pt-4 text-2xl font-bold leading-8 tracking-tight sm:text-3xl md:text-4xl bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">
+        <h1 className="pb-2 pt-4 text-2xl font-bold leading-8 tracking-tight sm:text-3xl md:text-4xl bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">
           {authorName}
-        </h3>
+        </h1>
         <div className="md:text-md text-base text-gray-500 dark:text-gray-400">{authorOccupation}</div>
-        <div className="md:text-md text-base text-gray-500 dark:text-gray-400">{authorLocation}</div>
-        <div className="flex space-x-3 pt-6">
+        <div className="md:text-md text-base text-gray-500 dark:text-gray-400 flex space-x-1 items-center justify-center md:justify-start"><MapPin className=" h-5 w-5"/> {authorLocation}</div>
+        <div className="flex space-x-3 pt-6 justify-center md:justify-start">
           <Button variant="outline" size="icon" asChild>
             <Link href={linkedinURL} target="_blank" rel="nofollow">
               <Linkedin className="h-5 w-5"/>

@@ -1,5 +1,3 @@
-'use server'
-
 import {getAllPosts, Module} from "@/lib/blog";
 import Link from 'next/link';
 import {formatDate} from "date-fns/format";
@@ -32,8 +30,8 @@ export async function BlogList({maxResults}: BlogListProps) {
                             <dl className="block">
                               <dt className="sr-only">Published on</dt>
                               <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                                <time dateTime={post.date} suppressHydrationWarning>
-                                  {formatDate(post.date, "yyyy-MM-dd")}
+                                <time dateTime={formatDate(post.createdAt, "yyyy-MM-dd")} suppressHydrationWarning>
+                                  {formatDate(post.createdAt, "yyyy-MM-dd")}
                                 </time>
                               </dd>
                             </dl>

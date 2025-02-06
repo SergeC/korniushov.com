@@ -11,6 +11,7 @@ export default async function BlogPage() {
         <h1 className="text-4xl font-bold mb-8">Blog Posts</h1>
         <div className="grid gap-6">
           {posts.map((post: Post) => (
+            <article key={post.slug}>
               <Card key={post.slug}>
                 <CardHeader>
                   <CardTitle>
@@ -19,13 +20,14 @@ export default async function BlogPage() {
                     </Link>
                   </CardTitle>
                   <CardDescription>
-                    {format(new Date(post.date), 'MMMM dd, yyyy')}
+                    {format(post.createdAt, 'MMMM dd, yyyy')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">{post.excerpt}</p>
                 </CardContent>
               </Card>
+            </article>
           ))}
         </div>
       </div>
