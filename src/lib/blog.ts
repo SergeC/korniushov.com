@@ -10,7 +10,8 @@ export interface Post {
   slug: string;
   title: string;
   excerpt?: string;
-  date: string;
+  createdAt: Date;
+  updatedAt: Date;
   content: JSX.Element | undefined;
 }
 
@@ -41,7 +42,8 @@ export async function getPost(slug: string, module: Module): Promise<Post> {
     slug: slug,
     title: data.title,
     excerpt: data.excerpt,
-    date: data.date,
+    createdAt: data.date,
+    updatedAt: data.date,
     content: mdxContent,
   }
 }
@@ -60,13 +62,14 @@ export async function getAllPosts(module: Module): Promise<Post[]> {
       slug: slug,
       title: data.title,
       excerpt: data.excerpt,
-      date: data.date,
+      createdAt: data.date,
+      updatedAt: data.date,
       content: undefined,
     })
   }
 
   return posts.sort((a: Post, b: Post) => {
-    if (a.date < b.date) {
+    if (a.createdAt < b.createdAt) {
       return 1
     } else {
       return -1
