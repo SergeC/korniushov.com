@@ -4,9 +4,10 @@ import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {cn} from '@/lib/utils'
 import {ModeToggle} from '@/components/mode-toggle'
-import {Home, FileText, User} from 'lucide-react'
+import {FileText, User, PawPrint} from 'lucide-react'
 import {authorName} from "@/lib/consts";
 import {UkrainianFlag} from "@/components/icons";
+import {MobileNav} from "@/components/mobile-nav";
 
 export function Navigation() {
   const pathname = usePathname()
@@ -14,12 +15,12 @@ export function Navigation() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center mx-auto">
-        <div className="mr-4 flex">
+        <div className="mr-4 flex items-center">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <Home className="h-6 w-6" />
+            <PawPrint className="h-6 w-6 animate-pulse"/>
             <span className="font-bold bg-gradient-to-r from-blue-500 to-yellow-400 bg-clip-text text-transparent">{authorName}</span>
           </Link>
-          <nav className="flex items-center space-x-6 text-sm font-medium">
+          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
             <Link href="https://x.com/hashtag/StandWithUkraine" className="font-bold italic" target="_blank" rel="nofollow">
               <div className="flex items-center space-x-2">
                 <UkrainianFlag/>
@@ -54,6 +55,7 @@ export function Navigation() {
         </div>
         <div className="ml-auto flex items-center space-x-4">
           <ModeToggle />
+          <MobileNav/>
         </div>
       </div>
     </header>
