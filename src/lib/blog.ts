@@ -11,7 +11,7 @@ export interface Post {
   title: string;
   excerpt?: string;
   createdAt: Date;
-  updatedAt: Date;
+  updatedAt: Date | undefined;
   content: JSX.Element | undefined;
 }
 
@@ -38,14 +38,19 @@ export async function getPost(slug: string, module: Module): Promise<Post> {
     },
   })
 
-  return {
+  const post: Post = {
     slug: slug,
     title: data.title,
     excerpt: data.excerpt,
-    createdAt: data.date,
-    updatedAt: data.date,
+    createdAt: new Date(data.createdAt),
+    updatedAt: undefined,
     content: mdxContent,
+  };
+  if (data.updatedAt) {
+    post.updatedAt = new Date(data.updatedAt);
   }
+
+  return post
 }
 
 export async function getAllPosts(module: Module): Promise<Post[]> {
@@ -58,14 +63,20 @@ export async function getAllPosts(module: Module): Promise<Post[]> {
     const fileContents = fs.readFileSync(fullPath, 'utf8')
     const {data} = matter(fileContents)
 
-    posts.push({
+    const post: Post = {
       slug: slug,
       title: data.title,
       excerpt: data.excerpt,
-      createdAt: data.date,
-      updatedAt: data.date,
-      content: undefined,
-    })
+      createdAt: new Date(data.createdAt),
+      updatedAt: undefined,
+      content: undefined
+    };
+
+    if (data.updatedAt) {
+      post.updatedAt = new Date(data.updatedAt);
+    }
+
+    posts.push(post)
   }
 
   return posts.sort((a: Post, b: Post) => {

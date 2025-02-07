@@ -70,30 +70,25 @@ function getFullUrl(path: string): string {
 function generateRssItem(post: Post) {
   return `
     <item>
-      <guid>${getFullUrl(`/blog/${post.slug}`)}</guid>
       <title>${post.title}</title>
       <link>${getFullUrl(`/blog/${post.slug}`)}</link>
-      ${post.excerpt && `<description>${post.excerpt}</description>`}
-      <pubDate>${new Date(post.createdAt).toUTCString()}</pubDate>
-      <author>${authorName}</author>
+      <description>${post.excerpt}</description>
+      <pubDate>${post.createdAt.toUTCString()}</pubDate>
+      <guid>${getFullUrl(`/blog/${post.slug}`)}</guid>
     </item>
 	`
 }
 
 function generateRss(posts: Post[]) {
-  return `
+  return `<?xml version="1.0" encoding="UTF-8"?>
     <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-      <channel>
+    <channel>
         <title>${authorName}'s Blog</title>
         <link>${getFullUrl(`/blog`)}</link>
         <description>${siteDescription}</description>
         <language>en-us</language>
-        <managingEditor>${authorName}</managingEditor>
-        <webMaster>${authorName}</webMaster>
-        <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
-        <atom:link href="${getFullUrl(`/feed.xml`)}" rel="self" type="application/rss+xml"/>
+        <atom:link href="${getFullUrl(`/feed.xml`)}" rel="self" type="application/rss+xml" />
         ${posts.map((post) => generateRssItem(post)).join('')}
       </channel>
-    </rss>
-	`
+    </rss>`
 }
