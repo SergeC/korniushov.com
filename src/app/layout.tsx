@@ -4,7 +4,18 @@ import "./globals.css";
 import {ThemeProvider} from "@/components/theme-provider";
 import {Navigation} from "@/components/navigation";
 import {Footer} from "@/components/footer";
-import {authorName, siteDescription, siteKeywords, twitterUsername} from "@/lib/consts";
+import {
+  authorName,
+  authorOccupation,
+  authorPhoto,
+  githubURL,
+  linkedinURL,
+  siteDescription,
+  siteKeywords,
+  twitterURL,
+  twitterUsername
+} from "@/lib/consts";
+import {Person, WithContext} from "schema-dts";
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -48,6 +59,28 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd: WithContext<Person> = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    'name': authorName,
+    'description': siteDescription,
+    'url': process.env.NEXT_PUBLIC_FRONTEND_HOST,
+    'jobTitle': authorOccupation,
+    'gender': 'male',
+    'nationality': 'Ukrainian',
+    'image': authorPhoto,
+    'sameAs': [twitterURL, githubURL, linkedinURL],
+    'alumniOf': 'Dnipro State University of Internal Affairs, Dnipro National University of Railway Transport named after academician V. Lazaryan',
+    'birthPlace': {
+      '@type': 'Place',
+      'address': {
+        '@type': 'PostalAddress',
+        'addressLocality': 'Dnipro',
+        'addressCountry': 'Ukraine',
+        'postalCode': '49000',
+      },
+    }
+  }
   return (
       <html lang="en" suppressHydrationWarning>
       <meta name="msapplication-TileColor" content="#000000" />
@@ -62,6 +95,7 @@ export default function RootLayout({
           <Footer />
         </div>
       </ThemeProvider>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(jsonLd)}}/>
       </body>
       </html>
   );

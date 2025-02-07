@@ -3,7 +3,7 @@ export const authorPhoto = 'https://pbs.twimg.com/profile_images/686928492496306
 export const authorOccupation = 'Lead Software Engineer';
 export const authorLocation = 'Austin, TX';
 export const siteKeywords = [authorName, 'software development', 'software engineering', 'symfony', 'php', 'fintech', 'artificial intelligence'];
-export const siteDescription = `${authorName}, a ${authorOccupation} with 10+ years of experience building scalable systems, primarily in PHP`;
+export const siteDescription = `${authorName}, a ${authorOccupation} with 10+ years of experience building scalable systems, primarily in FinTech`;
 
 export const twitterUsername = 'scornushov';
 export const twitterURL = `https://x.com/${twitterUsername}`;
