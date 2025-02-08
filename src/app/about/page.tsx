@@ -6,6 +6,7 @@ import {AuthorSkills} from "@/components/author-skills";
 import Link from "next/link";
 import {githubURL, linkedinURL, twitterURL} from "@/lib/consts";
 import {SiGithub, SiX} from "@icons-pack/react-simple-icons";
+import {AboutPageSchema} from "@/lib/jsonLd";
 
 export default function AboutPage() {
   return (
@@ -47,6 +48,7 @@ export default function AboutPage() {
             </CardContent>
           </Card>
         </div>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(AboutPageSchema)}}/>
       </div>
   )
 }

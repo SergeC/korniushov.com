@@ -10,6 +10,7 @@ import {
   siteKeywords,
   twitterUsername
 } from "@/lib/consts";
+import {PersonSchema} from "@/lib/jsonLd";
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -67,6 +68,7 @@ export default function RootLayout({
           <Footer />
         </div>
       </ThemeProvider>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(PersonSchema)}}/>
       </body>
       </html>
   );

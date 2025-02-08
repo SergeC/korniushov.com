@@ -2,10 +2,13 @@ export const authorName = 'Serhii Korniushov';
 export const authorPhoto = 'https://pbs.twimg.com/profile_images/686928492496306176/d3ipJ7SA_400x400.jpg';
 export const authorOccupation = 'Lead Software Engineer';
 export const authorLocation = 'Austin, TX';
-export const siteKeywords = [authorName, 'software development', 'software engineering', 'symfony', 'php', 'fintech', 'artificial intelligence'];
+export const siteKeywords = [authorName, 'software development', 'software engineering', 'symfony', 'php', 'fintech', 'artificial intelligence', 'startups'];
 export const siteDescription = `${authorName}, a ${authorOccupation} with 10+ years of experience building scalable systems, primarily in FinTech`;
 
 export const twitterUsername = 'scornushov';
 export const twitterURL = `https://x.com/${twitterUsername}`;
 export const githubURL = 'https://github.com/SergeC';
 export const linkedinURL = 'https://www.linkedin.com/in/serhii-korniushov/';
+export const indiehackersURL = 'https://www.indiehackers.com/sergec';
+export const scholarURL = 'https://scholar.google.com/citations?user=s06cb5kAAAAJ';
+// todo add mediumURL
