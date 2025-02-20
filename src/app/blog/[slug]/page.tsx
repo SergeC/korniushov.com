@@ -17,7 +17,7 @@ export default async function BlogPost({params}: { params: Promise<{ slug: strin
     const post = await getPost(slug, Module.Blog);
 
     return (
-        <article className="max-w-4xl mx-auto prose dark:prose-invert">
+        <article className="max-w-4xl mx-auto prose dark:prose-invert text-justify">
           <h1>{post.title}</h1>
           <div className="text-muted-foreground mb-8">
             {post.createdAt ? format(post.createdAt, 'MMMM dd, yyyy') : null}

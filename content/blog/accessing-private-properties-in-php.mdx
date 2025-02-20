@@ -1,0 +1,776 @@
+---
+title: "Accessing private properties in PHP"
+createdAt: "2025-02-20"
+updatedAt: "2025-02-20"
+excerpt: "Most online guides show you how to get at private properties in child classes, but they often skip over the parent class case. This article will cover both, and reveal the secrets!"
+---
+
+[//]: # (# Accessing private properties in PHP)
+
+Object-Oriented Programming (OOP) is all about organizing your code into neat little packages called objects. These
+objects contain both data (properties) and the code that works with that data (methods). A core idea in OOP is
+*encapsulation*, which basically means bundling everything up together and controlling access to it. Think of it like a
+well-organized toolbox – you know what's inside, but you access the tools through specific openings. As Wikipedia puts
+it, encapsulation "refers to the bundling of data with the methods that operate on that data, or the restricting of
+direct access to some of an object's components."
+
+In PHP, we use *access modifiers* – `private`, `protected`, and `public` – to implement encapsulation. `private`
+properties are the most tightly controlled; they're meant to be used only within the class that defines them. This is
+crucial for keeping your code organized and preventing unintended side effects. But, sometimes, you need to peek inside.
+Maybe you're writing tests, debugging a tricky issue, or working with some old code.
+
+Most online guides show you how to get at private properties in *child* classes, but they often skip over the *parent*
+class case. This article will cover both, and reveal the secrets!
+
+The methods we'll explore come from Serhii Korniushov's
+[reflection-utils](https://github.com/SergeC/reflection-utils) library. If you want to follow along, install
+it via Composer:
+
+```bash
+composer require serhiikorniushov/reflection-utils
+```
+
+## Let's Test It Out
+
+Following the principles of [Test-Driven Development (TDD)](https://en.wikipedia.org/wiki/Test-driven_development),
+we'll start with the tests. This helps us define exactly what we expect to happen. We'll use the same tests for all the
+different access methods. Here's the basic class structure we'll be working with (Class `A` inherits from Class `B`):
+
+```PHP
+class A extends B
+{
+    private string $privateProperty;
+    private string $privatePropertyA;
+    protected string $protectedPropertyA;
+
+    public function initValuesA()
+    {
+        $this->privateProperty = 'class A value';
+        $this->privatePropertyA = 'class A value';
+        $this->protectedPropertyA = 'class A protected value';
+    }
+
+    public function getPrivatePropertyA(): string
+    {
+        return $this->privatePropertyA;
+    }
+
+    public function getPrivatePropertyClassA(): string
+    {
+        return $this->privateProperty;
+    }
+}
+
+class B
+{
+    private string $privateProperty;
+    private string $privatePropertyB;
+    protected string $protectedPropertyB;
+
+    public function initValuesB()
+    {
+        $this->privateProperty = 'class B value';
+        $this->privatePropertyB = 'class B value';
+        $this->protectedPropertyB = 'class B protected value';
+    }
+
+    public function getPrivatePropertyB(): string
+    {
+        return $this->privatePropertyB;
+    }
+
+    public function getProtectedPropertyB(): string
+    {
+        return $this->protectedPropertyB;
+    }
+
+    public function getPrivatePropertyClassB(): string
+    {
+        return $this->privateProperty;
+    }
+}
+```
+
+You can find the
+complete [test code](https://github.com/SergeC/reflection-utils/blob/main/tests/AccessPrivateProtectedPropertiesTest.php)
+on GitHub.
+
+#### Reading
+
+This test checks if we can correctly read the values of private and protected properties:
+
+```PHP
+/**
+ * @param class-string $implementation  The class implementing the read/write methods.
+ * @param class-string|null $class       The parent class (or null for the current class).
+ * @param string $property            The name of the property to access.
+ * @param string|null $expectedValue   The expected value of the property.
+ * @return void
+ */
+#[DataProvider('propertiesReadProvider')]
+public function testRead(string $implementation, ?string $class, string $property, ?string $expectedValue): void
+{
+    $a = new A;
+    $a->initValuesA();
+    $a->initValuesB();
+    $result = $implementation::read($a, $property, $class);
+    self::assertEquals($expectedValue, $result);
+}
+
+public static function propertiesReadProvider(): \Generator
+{
+    $implementations = [MangledObjectReflection::class, ...self::IMPLEMENTATIONS];
+    foreach ($implementations as $implementation) {
+        yield [$implementation, A::class, 'privateProperty', 'class A value'];
+        yield [$implementation, B::class, 'privateProperty', 'class B value'];
+        yield [$implementation, null, 'protectedPropertyB', 'class B protected value'];
+        yield [$implementation, null, 'property does not exists', null];
+    }
+}
+```
+
+#### Writing
+
+This test verifies that we can modify the values of private and protected properties:
+
+```PHP
+/**
+ * @param class-string $implementation  The class implementing the read/write methods.
+ * @param class-string|null $class       The parent class (or null for the current class).
+ * @param string $property            The name of the property to access.
+ * @param bool $expectedResult        Whether the write operation should succeed.
+ * @param string|null $expectedValue   The expected new value of the property.
+ * @param string|null $getter          The name of a getter method to verify the change.
+ * @return void
+ */
+#[DataProvider('propertiesWriteProvider')]
+public function testWrite(string $implementation, ?string $class, string $property, bool $expectedResult, ?string $expectedValue, ?string $getter): void
+{
+    $a = new A;
+    $a->initValuesA();
+    $a->initValuesB();
+    $result = $implementation::write($a, $property, $expectedValue, $class);
+    self::assertEquals($expectedResult, $result);
+    if ($getter) {
+        self::assertEquals($expectedValue, $a->$getter());
+    }
+}
+
+public static function propertiesWriteProvider(): \Generator
+{
+    foreach (self::IMPLEMENTATIONS as $implementation) {
+        yield [$implementation, A::class, 'privateProperty', true, 'class A value changed', 'getPrivatePropertyClassA'];
+        yield [$implementation, B::class, 'privateProperty', true, 'class B value changed', 'getPrivatePropertyClassB'];
+        yield [$implementation, null, 'protectedPropertyB', true, 'class B protected value changed', 'getProtectedPropertyB'];
+        yield [$implementation, null, 'property does not exists', false, null, null];
+    }
+}
+```
+
+Let's explore the different ways to get at those private properties.
+
+## Reflection
+
+PHP's [Reflection Class](https://www.php.net/manual/en/class.reflectionclass.php) API provides a powerful way to inspect
+and modify class properties at runtime. According to the PHP manual, "The Reflection API is a set of classes that let
+you introspect classes, interfaces, functions, methods and extensions."
+
+### Reflection Class
+
+This is a general-purpose reflection tool.
+
+#### Reading
+
+```PHP
+// Child class (A)
+$value = ClassReflection::read($stub, 'privatePropertyA');
+
+// Parent class (B) -  Notice the third argument!
+$value = ClassReflection::read($stub, 'privatePropertyB', B::class);
+```
+
+To access a parent class property, we need to supply a `read` method third argument with the Full Qualified Class Name
+of the parent class.
+
+Here's the code that makes it work:
+
+```PHP
+/**
+ * Reads a property from an object.
+ *
+ * @param object $object      The object to read from.
+ * @param string $property    The name of the property.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return mixed              The property value, or null if it doesn't exist.
+ * @throws \ReflectionException If the property can't be accessed.
+ */
+public static function read(object $object, string $property, ?string $class = null): mixed
+{
+    $reflectionClass = new \ReflectionClass($class ?? $object);
+    try {
+        $reflectionProperty = $reflectionClass->getProperty($property);
+    } catch (\ReflectionException $e) {
+        return null;
+    }
+    $reflectionProperty->setAccessible(true);
+
+    return $reflectionProperty->getValue($object);
+}
+```
+
+#### Writing
+
+```PHP
+// Child class (A)
+ClassReflection::write($stub, 'privatePropertyA', 'new value');
+
+// Parent class (B) - Again, note the fourth argument.
+ClassReflection::write($stub, 'privatePropertyB', 'new value', B::class);
+```
+
+And the code:
+
+```PHP
+/**
+ * Writes to a property of an object.
+ *
+ * @param object $object      The object to write to.
+ * @param string $property    The name of the property.
+ * @param mixed $value        The new value.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return bool              True if successful, false otherwise.
+ * @throws \ReflectionException If the property can't be accessed.
+ */
+public static function write(object $object, string $property, mixed $value, ?string $class = null): bool
+{
+    $reflectionClass = new \ReflectionClass($class ?? $object);
+    try {
+        $reflectionProperty = $reflectionClass->getProperty($property);
+    } catch (\ReflectionException $e) {
+        return false;
+    }
+    $reflectionProperty->setAccessible(true);
+    $reflectionProperty->setValue($object, $value);
+
+    return true;
+}
+```
+
+### Reflection Property
+
+This based on reflecting
+properties. [ReflectionProperty Class](https://www.php.net/manual/en/class.reflectionproperty.php)
+
+#### Reading
+
+```PHP
+// Child class (A)
+$value = PropertyReflection::read($stub, 'privatePropertyA');
+
+// Parent class (B). Note the third argument.
+$value = PropertyReflection::read($stub, 'privatePropertyB', B::class);
+```
+
+To access a parent class property, we need to supply a `read` method third argument with the Full Qualified Class Name
+of the parent class.
+
+```PHP
+/**
+ * Reads a property from an object.
+ *
+ * @param object $object      The object to read from.
+ * @param string $property    The name of the property.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return mixed              The property value, or null if it doesn't exist.
+ */
+public static function read(object $object, string $property, ?string $class = null): mixed
+{
+    try {
+        $reflectionProperty = new \ReflectionProperty($class ?? $object, $property);
+    } catch (\ReflectionException $e) {
+        return null;
+    }
+    $reflectionProperty->setAccessible(true);
+
+    return $reflectionProperty->getValue($object);
+}
+```
+
+#### Writing
+
+```PHP
+// Child class (A)
+PropertyReflection::write($stub, 'privatePropertyA', 'new value');
+
+// Parent class (B). Note the fourth argument.
+PropertyReflection::write($stub, 'privatePropertyB', 'new value', B::class);
+```
+
+```PHP
+/**
+ * Writes to a property of an object.
+ *
+ * @param object $object      The object to write to.
+ * @param string $property    The name of the property.
+ * @param mixed $value        The new value.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return bool              True if successful, false otherwise.
+ */
+public static function write(object $object, string $property, mixed $value, ?string $class = null): bool
+{
+    try {
+        $reflectionProperty = new \ReflectionProperty($class ?? $object, $property);
+    } catch (\ReflectionException $e) {
+        return false;
+    }
+    $reflectionProperty->setAccessible(true);
+    $reflectionProperty->setValue($object, $value);
+
+    return true;
+}
+```
+
+The key to both of these is `$reflectionProperty->setAccessible(true)`. This line temporarily disables the access
+restrictions, allowing us to read or write the private property.
+
+## Closure
+
+PHP's [Closures](https://www.php.net/manual/en/class.closure.php) are anonymous functions that can be bound to a
+specific object scope. This is a clever way to get around access restrictions.
+
+### Reading
+
+```PHP
+// Child class (A)
+$value = ClosureReflection::read($stub, 'privatePropertyA');
+
+// Parent class (B). Note the third argument.
+$value = ClosureReflection::read($stub, 'privatePropertyB', B::class);
+```
+
+```PHP
+/**
+ * Reads a property from an object using a closure.
+ *
+ * @param object $object      The object to read from.
+ * @param string $property    The name of the property.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return mixed              The property value.
+ */
+public static function read(object $object, string $property, ?string $class = null): mixed
+{
+    $closure = \Closure::bind(static function (object $object, string $property) {
+        return $object->$property;
+    }, null, $class ?? $object);
+
+    return $closure($object, $property);
+}
+```
+
+### Writing
+
+```PHP
+// Child class (A)
+ClosureReflection::write($stub, 'privatePropertyA', 'new value');
+
+// Parent class (B). Note the fourth argument.
+ClosureReflection::write($stub, 'privatePropertyB', 'new value', B::class);
+```
+
+```PHP
+/**
+ * Writes to a property of an object using a closure.
+ *
+ * @param object $object      The object to write to.
+ * @param string $property    The name of the property.
+ * @param mixed $value        The new value.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return bool              True if successful, false otherwise.
+ */
+public static function write(object $object, string $property, mixed $value, ?string $class = null): bool
+{
+    $closure = \Closure::bind(static function (object $object, string $property, ?string $value) {
+        if (property_exists($object, $property)) {
+            $object->$property = $value;
+            return true;
+        }
+        return false;
+    }, null, $class ?? $object);
+
+    return $closure($object, $property, $value);
+}
+```
+
+We're creating a closure that *looks* like it's inside the class (because of `\Closure::bind`). The `null` for the
+second argument to `bind` means we're not binding to a specific object instance, but the third argument,
+`$class ?? $object`, sets the scope of the closure.
+
+## Closure by Reference
+
+This is a variation on the closure approach, but it uses references to modify the property directly.
+
+### Reading
+
+```PHP
+// Child class (A)
+$value = ClosureReferenceReflection::read($stub, 'privatePropertyA');
+
+// Parent class (B)
+$value = ClosureReferenceReflection::read($stub, 'privatePropertyB', B::class);
+```
+
+```PHP
+/**
+ * Reads a property from an object using a closure by reference.
+ *
+ * @param object $object      The object to read from.
+ * @param string $property    The name of the property.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return mixed              The property value.
+ */
+public static function read(object $object, string $property, ?string $class = null): mixed
+{
+    $closure = \Closure::bind(static function &(object $object, string $property) {
+        return $object->$property;
+    }, null, $class ?? $object);
+
+    $val = &$closure($object, $property);
+
+    return $val;
+}
+```
+
+### Writing
+
+```PHP
+// Child class (A)
+ClosureReferenceReflection::write($stub, 'privatePropertyA', 'new value');
+
+// Parent class (B)
+ClosureReferenceReflection::write($stub, 'privatePropertyB', 'new value', B::class);
+```
+
+```PHP
+/**
+ * Writes to a property of an object using a closure by reference.
+ *
+ * @param object $object      The object to write to.
+ * @param string $property    The name of the property.
+ * @param mixed $value        The new value.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return bool              True if successful, false otherwise.
+ */
+public static function write(object $object, string $property, mixed $value, ?string $class = null): bool
+{
+    if (!property_exists($object, $property)) {
+        return false;
+    }
+    $closure = \Closure::bind(static function &(object $object, string $property) {
+        return $object->$property;
+    }, null, $class ?? $object);
+
+    $val = &$closure($object, $property);
+    $val = $value;
+
+    return true;
+}
+```
+
+The `&` in `function &(...)` and `$val = &$closure(...)` creates a reference, so any changes we make to `$val` are
+reflected in the original property.
+
+## The Array Cast
+
+PHP lets
+you [cast objects to arrays](https://www.php.net/manual/en/language.types.array.php#language.types.array.casting), and
+the way it does this exposes private properties in a predictable way. It's even documented and
+has [tests](https://github.com/php/php-src/blob/master/tests/classes/array_conversion_keys.phpt) to ensure it keeps
+working.
+
+### Reading
+
+```PHP
+// Child class (A)
+$value = ArrayReflection::read($stub, 'privatePropertyA');
+
+// Parent class (B)
+$value = ArrayReflection::read($stub, 'privatePropertyB', B::class);
+```
+
+```PHP
+/**
+ * Reads a property from an object by casting it to an array.
+ * Works faster when passed 3rd argument ($class) as class name of object due to omitting get_class() call.
+ *
+ * @param object $object      The object to read from.
+ * @param string $property    The name of the property.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return mixed              The property value, or null if it doesn't exist.
+ */
+public static function read(object $object, string $property, ?string $class = null): mixed
+{
+    $obj = (array)$object;
+    return $obj["\0" . ($class ?? get_class($object)) . "\0" . $property] ?? $obj["\0*\0" . $property] ?? null;
+}
+```
+
+### Writing
+
+```PHP
+//Child Class (A)
+ArrayReflection::write($stub, 'privatePropertyA', 'new value');
+
+//Parent Class (B)
+ArrayReflection::write($stub, 'privatePropertyB', 'new value', B::class);
+```
+
+```PHP
+/**
+ * Write private or protected property value from object. If property is not exists, return null.
+ * Works faster when passed 3rd argument ($class) as class name of object due to omitting get_class() call.
+ * @param object $object
+ * @param string $property
+ * @param mixed $value
+ * @param class-string|null $class parent class Full Qualified Class Name
+ * @return mixed
+ */
+public static function write(object $object, string $property, mixed $value, ?string $class = null): bool
+{
+    $encodedProperties = [
+        "\0" . ($class ?? get_class($object)) . "\0" . $property, // for private properties
+        "\0*\0" . $property, // for protected properties
+        $value, // new property value
+    ];
+    $success = false;
+    array_walk($object, static function (mixed &$value, string $key, array $encodedProperties) use (&$success) {
+        if ($key === $encodedProperties[0] || $key === $encodedProperties[1]) {
+            $value = $encodedProperties[2];
+            $success = true;
+        }
+    }, $encodedProperties);
+
+    return $success;
+}
+```
+
+When an object is cast to an array, private properties become array keys with the format `\0ClassName\0propertyName`.
+Protected properties use `\0*\0propertyName`. We use this knowledge to directly access the array elements. We use
+[`array_walk`](https://www.php.net/manual/en/function.array-walk.php) to change the required property.
+
+## Serialize
+
+This approach leverages PHP's serialization mechanism to access private properties through string manipulation of the
+serialized object representation.
+
+### Reading
+
+```PHP
+// Child class (A)
+$value = SerializeReflection::read($stub, 'privatePropertyA');
+
+// Parent class (B)
+$value = SerializeReflection::read($stub, 'privatePropertyB', B::class);
+```
+
+```PHP
+/**
+ * Reads a property from an object by serializing and unserializing it.
+ *
+ * @param object $object      The object to read from.
+ * @param string $property    The name of the property.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return string|null        The property value, or null if it doesn't exist.
+ */
+public static function read(object $object, string $property, ?string $class = null): ?string
+{
+    $serialized = serialize($object);
+
+    $propertyNeedle = "\0" . ($class ?? get_class($object)) . "\0" . $property . '";s:'; // for private properties
+    $propertyPosition = strpos($serialized, $propertyNeedle);
+    if ($propertyPosition === false) {
+        $propertyNeedle = "\0*\0" . $property . '";s:'; // for protected properties
+        $propertyPosition = strpos($serialized, $propertyNeedle);
+    }
+    if ($propertyPosition !== false) {
+        $propertyPosition += strlen($propertyNeedle);
+        $propertyLengthPosition = strpos($serialized, ':', $propertyPosition);
+        $extractedPropertyLength = $propertyLengthPosition - $propertyPosition;
+        $propertyLength = substr($serialized, $propertyPosition, $extractedPropertyLength);
+
+        return substr($serialized, $propertyPosition + $extractedPropertyLength + 2, $propertyLength);
+    }
+
+    return null;
+}
+```
+
+### Writing
+
+```PHP
+// Child class (A)
+SerializeReflection::write($stub, 'privatePropertyA', 'new value');
+
+// Parent class (B)
+SerializeReflection::write($stub, 'privatePropertyB', 'new value', B::class);
+```
+
+```PHP
+/**
+ * Writes to a property of an object by serializing, modifying, and unserializing it.
+ *
+ * @param object $object      The object to write to.
+ * @param string $property    The name of the property.
+ * @param mixed $value        The new value.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return bool              True if successful, false otherwise.
+ */
+public static function write(object &$object, string $property, mixed $value, ?string $class = null): bool
+{
+    $serialized = serialize($object);
+
+    $propertyNeedle = "\0" . ($class ?? get_class($object)) . "\0" . $property . '";s:'; // for private properties
+    $propertyPosition = strpos($serialized, $propertyNeedle);
+    if ($propertyPosition === false) {
+        $propertyNeedle = "\0*\0" . $property . '";s:'; // for protected properties
+        $propertyPosition = strpos($serialized, $propertyNeedle);
+    }
+    if ($propertyPosition !== false) {
+        $propertyPosition += strlen($propertyNeedle);
+        $propertyLengthPosition = strpos($serialized, ':', $propertyPosition);
+        $extractedPropertyLength = $propertyLengthPosition - $propertyPosition;
+        $propertyLength = substr($serialized, $propertyPosition, $extractedPropertyLength);
+
+        $serialized = substr_replace($serialized, $value, $propertyPosition + $extractedPropertyLength + 2, $propertyLength);
+        $serialized = substr_replace($serialized, strlen($value), $propertyPosition, $extractedPropertyLength);
+        $object = unserialize($serialized, [$object]);
+
+        return true;
+    }
+
+    return false;
+}
+```
+
+This method searches for the serialized representation of the property within the serialized string and extracts or
+replaces the value.
+
+## Mangled Object
+
+PHP 7.4 introduced [`get_mangled_object_vars`](https://www.php.net/manual/en/function.get-mangled-object-vars.php),
+which provides a more direct way to get all properties, including private ones, in a format similar to the array cast.
+
+### Reading
+
+```php
+// Child class (A)
+$value = MangledObjectReflection::read($stub, 'privatePropertyA');
+
+// Parent class (B)
+$value = MangledObjectReflection::read($stub, 'privatePropertyB', B::class);
+```
+
+```PHP
+/**
+ * Reads a property from an object using get_mangled_object_vars().
+ *
+ * @param object $object      The object to read from.
+ * @param string $property    The name of the property.
+ * @param class-string|null $class The parent class (or null for the current class).
+ * @return mixed              The property value, or null if it doesn't exist.
+ */
+public static function read(object $object, string $property, ?string $class = null): mixed
+{
+    $obj = get_mangled_object_vars($object);
+    return $obj["\0" . ($class ?? get_class($object)) . "\0" . $property] ?? $obj["\0*\0" . $property] ?? null;
+}
+```
+
+This is essentially a built-in version of the array cast trick, but it's more reliable because it's an official PHP
+function. There is no write method for it, because `get_mangled_object_vars` returns property values, but not links to
+them.
+
+## Benchmark Performance
+
+Let's see how these methods stack up in terms of speed. You can find the
+full [benchmark code](https://github.com/SergeC/reflection-utils/blob/main/bin/benchmark) on GitHub.
+
+```
+PHP:	8.4.3
+Host:	Darwin mac.lan 24.2.0 Darwin Kernel Version 24.2.0: Fri Dec  6 19:03:40 PST 2024; root:xnu-11215.61.5~2/RELEASE_ARM64_T6041 arm64
+Iterations:	1000000
+```
+
+### Read Operations
+
+| Accessing Method           | Property Scope | Time (Million Iterations) |
+|----------------------------|----------------|---------------------------|
+| ArrayReflection            | Parent Class   | 86                        |
+| PropertyReflection         | Parent Class   | 89                        |
+| PropertyReflection         | Child Class    | 90                        |
+| ArrayReflection            | Child Class    | 104                       |
+| ClosureReflection          | Child Class    | 105                       |
+| ClosureReflection          | Parent Class   | 105                       |
+| ClosureReferenceReflection | Child Class    | 107                       |
+| ClosureReferenceReflection | Parent Class   | 108                       |
+| MangledObjectReflection    | Parent Class   | 112                       |
+| ClassReflection            | Child Class    | 116                       |
+| ClassReflection            | Parent Class   | 118                       |
+| MangledObjectReflection    | Child Class    | 127                       |
+| SerializeReflection        | Parent Class   | 306                       |
+| SerializeReflection        | Child Class    | 346                       |
+
+The array cast (`ArrayReflection`) and `PropertyReflection` are the clear winners for reading. Serialization is
+significantly slower.
+
+### Write Operations
+
+| Accessing Method           | Property Scope | Time (Million Iterations) |
+|----------------------------|----------------|---------------------------|
+| ClosureReferenceReflection | Parent Class   | 37                        |
+| PropertyReflection         | Child Class    | 100                       |
+| PropertyReflection         | Parent Class   | 102                       |
+| ClassReflection            | Child Class    | 127                       |
+| ClassReflection            | Parent Class   | 129                       |
+| ClosureReferenceReflection | Child Class    | 131                       |
+| ClosureReflection          | Child Class    | 134                       |
+| ClosureReflection          | Parent Class   | 135                       |
+| ArrayReflection            | Parent Class   | 426                       |
+| ArrayReflection            | Child Class    | 447                       |
+| SerializeReflection        | Parent Class   | 717                       |
+| SerializeReflection        | Child Class    | 769                       |
+
+`ClosureReferenceReflection` is blazing fast for writing, likely due to the direct reference manipulation.
+`PropertyReflection` come second. Serialization, again, is the slowest.
+
+Notice that accessing child class properties is sometimes slightly slower than parent class properties. This is because
+the code often needs to determine the class name using `get_class()`. If you provide the class name explicitly (as the
+third argument), this overhead is eliminated.
+
+The benchmarks were run using Serhii Korniushov's [MicroBench](https://github.com/SergeC/micro-bench) tool, which is a
+handy way to measure the performance of small snippets of PHP code. You can install it with:
+
+```bash
+composer require --dev serhiikorniushov/micro-bench
+```
+
+## Best Practices
+
+* **Use Sparingly:**  These techniques are powerful, but they should be used with care. They break encapsulation, which
+  can make your code harder to maintain and understand.
+* **Testing and Debugging Only:**  The primary use cases for accessing private properties are in testing and debugging.
+* **Performance Matters:**  Choose the method that best balances readability and performance for your specific
+  situation.
+* **Don't Break Encapsulation in Production (Usually):**  Avoid using these tricks to bypass proper object design in
+  your production code. If you find yourself needing to access private properties regularly, it's a sign that you should
+  refactor your code.
+* Consider adding `public` getter and setter methods.
+* Rethink the relationship between your classes.
+
+## Conclusion
+
+PHP offers a surprising number of ways to get at private properties, from the official Reflection API to quirky tricks
+like array casting and serialization. While these methods can be incredibly useful in certain situations (like testing
+or dealing with legacy systems), remember the core principles of OOP. Encapsulation is there for a reason.
+
+For most everyday coding, stick to well-defined public interfaces and proper getter/setter methods. Save 
+these "backdoor" techniques for when you really need them, and always prioritize clean, maintainable code.
