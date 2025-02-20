@@ -156,7 +156,7 @@ export const AboutPageSchema: WithContext<AboutPage> = {
     mainEntity: {'@id': personId},
 }
 
-const posts = await getAllPosts(Module.Blog);
+const posts = getAllPosts(Module.Blog);
 export const BlogSchema: WithContext<Blog> = {
     '@context': 'https://schema.org',
     '@type': 'Blog',

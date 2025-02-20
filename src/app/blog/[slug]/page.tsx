@@ -5,7 +5,7 @@ import {blogPostingSchema} from "@/lib/jsonLd";
 
 export async function generateStaticParams() {
   // https://nextjs.org/docs/app/api-reference/functions/generate-static-params
-  const posts = await getAllPosts(Module.Blog)
+  const posts = getAllPosts(Module.Blog)
   return posts.map((post: Post) => ({
     slug: post.slug,
   }))

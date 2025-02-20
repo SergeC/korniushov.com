@@ -22,7 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   // add blog posts
-  const posts = await getAllPosts(Module.Blog);
+  const posts = getAllPosts(Module.Blog);
   for (const post of posts) {
       uris.push({
           url: `/blog/${post.slug}`,

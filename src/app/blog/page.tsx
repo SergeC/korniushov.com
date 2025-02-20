@@ -5,7 +5,7 @@ import {format} from 'date-fns'
 import {BlogSchema} from "@/lib/jsonLd";
 
 export default async function BlogPage() {
-  const posts = await getAllPosts(Module.Blog)
+  const posts = getAllPosts(Module.Blog)
   return (
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-8">Blog Posts</h1>

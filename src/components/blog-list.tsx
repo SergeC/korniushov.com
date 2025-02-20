@@ -7,7 +7,7 @@ interface BlogListProps {
 }
 
 export async function BlogList({maxResults}: BlogListProps) {
-  const allPosts = await getAllPosts(Module.Blog);
+  const allPosts = getAllPosts(Module.Blog);
   let showAll: boolean = false;
   let posts = allPosts;
   if (maxResults && allPosts.length > maxResults) {

@@ -53,13 +53,17 @@ export async function getPost(slug: string, module: Module): Promise<Post> {
   return post
 }
 
-export async function getAllPosts(module: Module): Promise<Post[]> {
+export function getAllPosts(module: Module): Post[] {
   const files = fs.readdirSync(getMarkdownPathByModule(module))
   const posts: Post[] = []
 
   for (const file of files) {
     const slug: string = file.replace(/\.mdx$/, '')
     const fullPath = path.join(getMarkdownPathByModule(module), file)
+    // skip non md files
+    if (!file.endsWith('.mdx')) {
+      continue
+    }
     const fileContents = fs.readFileSync(fullPath, 'utf8')
     const {data} = matter(fileContents)
 
