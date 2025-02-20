@@ -8,11 +8,6 @@ on:
   # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
-env:
-  # Setting an environment variable with the value of a configuration variable
-  NEXT_PUBLIC_FRONTEND_HOST: ${{ vars.NEXT_PUBLIC_FRONTEND_HOST }}
-  NEXT_PUBLIC_GOOGLE_ANALYTICS: ${{ vars.NEXT_PUBLIC_GOOGLE_ANALYTICS }}
-  NEXT_TELEMETRY_DISABLED: ${{ vars.NEXT_TELEMETRY_DISABLED }}
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -80,6 +75,11 @@ jobs:
 
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
+        env:
+          # Setting an environment variable with the value of a configuration variable
+          NEXT_PUBLIC_FRONTEND_HOST: ${{ vars.NEXT_PUBLIC_FRONTEND_HOST }}
+          NEXT_PUBLIC_GOOGLE_ANALYTICS: ${{ vars.NEXT_PUBLIC_GOOGLE_ANALYTICS }}
+          NEXT_TELEMETRY_DISABLED: ${{ vars.NEXT_TELEMETRY_DISABLED }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
