@@ -74,7 +74,7 @@ function generateRssItem(post: Post) {
       <link>${getFullUrl(`/blog/${post.slug}`)}</link>
       <description>${post.excerpt}</description>
       <pubDate>${post.createdAt.toUTCString()}</pubDate>
-      <guid>${getFullUrl(`/blog/${post.slug}`)}</guid>
+      <guid>${getFullUrl(`/blog/${post.slug}?utm_source=Blog&utm_medium=RSS`)}</guid>
     </item>
 	`
 }

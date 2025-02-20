@@ -11,4 +11,4 @@ export const githubURL = 'https://github.com/SergeC';
 export const linkedinURL = 'https://www.linkedin.com/in/serhii-korniushov/';
 export const indiehackersURL = 'https://www.indiehackers.com/sergec';
 export const scholarURL = 'https://scholar.google.com/citations?user=s06cb5kAAAAJ';
-// todo add mediumURL
+// todo add mediumURL, bsky.app, dev.to
