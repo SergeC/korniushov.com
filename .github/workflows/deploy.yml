@@ -77,9 +77,9 @@ jobs:
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
         env:
           # Setting an environment variable with the value of a configuration variable
-          NEXT_PUBLIC_FRONTEND_HOST: ${{ vars.NEXT_PUBLIC_FRONTEND_HOST }}
-          NEXT_PUBLIC_GOOGLE_ANALYTICS: ${{ vars.NEXT_PUBLIC_GOOGLE_ANALYTICS }}
-          NEXT_TELEMETRY_DISABLED: ${{ vars.NEXT_TELEMETRY_DISABLED }}
+          NEXT_PUBLIC_FRONTEND_HOST: 'https://korniushov.com'
+          NEXT_PUBLIC_GOOGLE_ANALYTICS: 'G-S7VWDSNRVK'
+          NEXT_TELEMETRY_DISABLED: '1'
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
