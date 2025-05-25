@@ -26,7 +26,7 @@ export default async function BlogPost({params}: { params: Promise<{ slug: strin
         <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(blogPostingSchema(post))}}/>
         </article>
     )
-  } catch (error) {
+  } catch {
     notFound()
   }
 }
